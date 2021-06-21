@@ -7,6 +7,10 @@ import argparse
 import numpy as np
 import cv2
 
+"""
+Script to stabilize images using homography estimation.
+"""
+
 MIN_MATCH_COUNT = 10
 
 def compute_homography_list(filenames, debug_dir = ""):
