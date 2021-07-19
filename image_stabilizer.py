@@ -5,7 +5,7 @@ import time
 import glob
 import argparse
 import numpy as np
-import cv2
+import cv2 as cv
 
 """
 Script to stabilize images using homography estimation.
@@ -14,13 +14,13 @@ Script to stabilize images using homography estimation.
 MIN_MATCH_COUNT = 10
 
 def compute_homography_list(filenames, debug_dir = ""):
-  sift = cv2.SIFT_create()
+  sift = cv.SIFT_create()
   FLANN_INDEX_KDTREE = 1
   index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
   search_params = dict(checks = 50)
-  flann = cv2.FlannBasedMatcher(index_params, search_params)
+  flann = cv.FlannBasedMatcher(index_params, search_params)
 
-  img1 = cv2.imread(filenames[0])
+  img1 = cv.imread(filenames[0])
   kp1, des1 = sift.detectAndCompute(img1,None)
   shape = (img1.shape[0], img1.shape[1])
 
@@ -29,7 +29,7 @@ def compute_homography_list(filenames, debug_dir = ""):
   for i in range(1, len(filenames)):
     start = time.time()
 
-    img2 = cv2.imread(filenames[i])
+    img2 = cv.imread(filenames[i])
     kp2, des2 = sift.detectAndCompute(img2,None)
 
     matches = flann.knnMatch(des1,des2,k=2)
@@ -45,13 +45,12 @@ def compute_homography_list(filenames, debug_dir = ""):
         debug_draw_matches(img1, img2, pts1, pts2, filename, debug_dir)
 
       #Find homography matrix
-      H, _ = cv2.findHomography(pts2, pts1, method=cv2.RANSAC)
+      H, _ = cv.findHomography(pts2, pts1, method=cv.RANSAC)
       homography_list.append(H)
       end = time.time()
       print("Computed homography {}/{} in {:.3f} s".format(i, len(filenames)-1, end - start))
     else:
       print( "Not enough matches are found for image {} - {}/{}".format(filenames[i], len(good), MIN_MATCH_COUNT) )
-      matchesMask = None
 
     kp1 = kp2
     des1 = des2
@@ -68,7 +67,7 @@ def chain_homography(homography_list, shape):
 def find_image_shape(homography_list, shape):
   # Find the corners after the transform has been applied
   height, width = shape
-  corners = np.array([
+  corners_raw = np.array([
     [0, 0],
     [0, height - 1],
     [width - 1, height - 1],
@@ -81,8 +80,8 @@ def find_image_shape(homography_list, shape):
 
   # Find maximal bounding boxes
   for i in range(0, len(homography_list)):
-    corners = cv2.perspectiveTransform(np.float32([corners]), homography_list[i])[0]
-    u0, v0, bwidth, bheight = cv2.boundingRect(corners)
+    corners_transformed = cv.perspectiveTransform(np.float32([corners_raw]), homography_list[i])[0]
+    u0, v0, bwidth, bheight = cv.boundingRect(corners_transformed)
     u0_min = min(u0_min, u0)
     bwidth_max = max(bwidth_max, bwidth)
     v0_min = min(v0_min, v0)
@@ -120,11 +119,11 @@ def adjust_translation(homography_list, translation):
 def warp_perspective(filenames, homography_chained, shape, out_dir, debug_dir = ""):
   for idx, (f, h) in enumerate(zip(filenames, homography_chained)):
     start = time.time()
-    img = cv2.imread(f)
-    corrected = cv2.warpPerspective(img, h, (shape[1], shape[0]))
+    img = cv.imread(f)
+    corrected = cv.warpPerspective(img, h, (shape[1], shape[0]))
     filename = Path(f)
     filename = filename.stem
-    cv2.imwrite(os.path.join(out_dir, filename + "_corrected.png"), corrected)
+    cv.imwrite(os.path.join(out_dir, filename + "_corrected.png"), corrected)
 
     end = time.time()
     print("Warped image {}/{} in {:.3f} s".format(idx+1, len(filenames), end - start))
@@ -160,19 +159,19 @@ def debug_draw_features(img, kp, i, debug_dir):
   debug_img = img
   for idx, p in enumerate(kp):
     p = (int(p[0][0]), int(p[0][1]))
-    cv2.circle(debug_img, p, 5, (255, 0, 0), -1)
+    cv.circle(debug_img, p, 5, (255, 0, 0), -1)
 
-  cv2.imwrite(os.path.join(debug_dir, str(i) + "_features.png"), debug_img)
+  cv.imwrite(os.path.join(debug_dir, str(i) + "_features.png"), debug_img)
 
 def debug_draw_before_after(ref_before, ref_after, before, after, i, debug_dir):
-  combined_before = cv2.addWeighted(ref_before,0.4,before,0.2,0)
-  combined_after = cv2.addWeighted(ref_after,0.4,after,0.2,0)
+  combined_before = cv.addWeighted(ref_before,0.4,before,0.2,0)
+  combined_after = cv.addWeighted(ref_after,0.4,after,0.2,0)
 
-  cv2.imwrite(os.path.join(debug_dir, str(i) + "_before.png"), combined_before)
-  cv2.imwrite(os.path.join(debug_dir, str(i) + "_after.png"), combined_after)
+  cv.imwrite(os.path.join(debug_dir, str(i) + "_before.png"), combined_before)
+  cv.imwrite(os.path.join(debug_dir, str(i) + "_after.png"), combined_after)
 
 def debug_draw_matches(img1, img2, pts1, pts2, i, debug_dir):
-  debug_img = cv2.hconcat([img1, img2])
+  debug_img = cv.hconcat([img1, img2])
   width = img1.shape[1]
   for idx, (pt1, pt2) in enumerate(zip(pts1, pts2)):
     p1 = (int(pt1[0][0]), int(pt1[0][1]))
@@ -182,13 +181,13 @@ def debug_draw_matches(img1, img2, pts1, pts2, i, debug_dir):
     base_color = idx % 3
     color = idx * 255/(len(pts1))
     if base_color == 0:
-      cv2.line(debug_img,p1, p2,(color,0,0),2)
+      cv.line(debug_img,p1, p2,(color,0,0),2)
     elif base_color == 1:
-      cv2.line(debug_img,p1, p2,(0,color,0),2)
+      cv.line(debug_img,p1, p2,(0,color,0),2)
     elif base_color == 2:
-      cv2.line(debug_img,p1, p2,(0,0,color),2)
+      cv.line(debug_img,p1, p2,(0,0,color),2)
 
-  cv2.imwrite(os.path.join(debug_dir, str(i) + "_matches.png"), debug_img)
+  cv.imwrite(os.path.join(debug_dir, str(i) + "_matches.png"), debug_img)
 
 def main(in_dir, out_dir, debug):
   ensure_dir(out_dir)

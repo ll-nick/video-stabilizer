@@ -4,7 +4,7 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y python3-pip ffmpeg libsm6 libxext6 && \
+    apt-get install --no-install-recommends -y python3-pip ffmpeg libsm6 libxext6 && \
     pip install setuptools && \
     pip install --upgrade setuptools pip && \
     pip install opencv-python
