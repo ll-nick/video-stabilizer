@@ -24,8 +24,8 @@ def fill_holes(img1, img2):
     gray1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
     gray2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
 
-    _, thresh1 = cv.threshold(gray1,10,255,cv.THRESH_BINARY)
-    _, thresh2 = cv.threshold(gray2,10,255,cv.THRESH_BINARY)
+    _, thresh1 = cv.threshold(gray1,30,255,cv.THRESH_BINARY)
+    _, thresh2 = cv.threshold(gray2,30,255,cv.THRESH_BINARY)
 
     mask1 = thresh1 - thresh2
     mask2 = thresh2 - thresh1
