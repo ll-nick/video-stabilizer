@@ -7,6 +7,8 @@ import argparse
 import numpy as np
 import cv2 as cv
 
+from utility import ensure_dir, load_filenames
+
 """
 Script to stabilize images using homography estimation.
 """
@@ -142,18 +144,6 @@ def filterMatches(matches):
       if m.distance < 0.7*n.distance:
           good.append(m)
   return good
-
-def load_filenames(dir):
-  filenames = glob.glob("{}/*.png".format(dir)) 
-  if len(filenames) == 0:
-    raise RuntimeError("No images found in specified directory.")
-  filenames.sort()
-
-  return filenames
-
-def ensure_dir(d):
-  if not os.path.isdir(d):
-      Path(d).mkdir(parents=True)
 
 def debug_draw_features(img, kp, i, debug_dir):
   debug_img = img
