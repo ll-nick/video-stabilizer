@@ -9,6 +9,7 @@ RUN apt-get update && \
     pip install --upgrade setuptools pip && \
     pip install opencv-python
 
+COPY utility.py ./
 COPY image_stabilizer.py ./
 
 ENTRYPOINT ["python3", "image_stabilizer.py", "--input-dir", "/project/input", "--output-dir", "/project/output"]

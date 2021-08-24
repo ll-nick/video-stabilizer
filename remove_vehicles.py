@@ -30,26 +30,31 @@ def remove_vehicles_main(img_dir, detections_path, out_dir):
 
     for idx, img_filename in enumerate(img_filenames):
         print("Removing vehicles in image {}/{}".format(idx+1, len(img_filenames)))
-        img = remove_vehicles(img_filename, detections_filenames)
-        cv.imwrite(os.path.join(out_dir, Path(img_filename).stem + "_cleaned.png"), img)
+        ret, img = remove_vehicles(img_filename, detections_filenames)
+        if ret:
+            cv.imwrite(os.path.join(out_dir, Path(img_filename).stem + ".png"), img)
 
 def remove_vehicles(img_filename, detections_filenames):
     img = cv.imread(img_filename)
     stem = Path(img_filename).stem
     ret, detections = get_detections(stem, detections_filenames)
 
-    for detection in detections:
-        detection.rel2abs(img.shape)
-        x = int(detection.x)
-        y = int(detection.y)
-        half_w = int(detection.w/2)
-        half_h = int(detection.h/2)
-        img[y-half_h:y+half_h, x-half_w:x+half_w, :] = 0
+    if ret:
+        for detection in detections:
+            detection.rel2abs(img.shape)
+            x = int(detection.x)
+            y = int(detection.y)
+            half_w = int(detection.w/2)
+            half_h = int(detection.h/2)
+            img[y-half_h:y+half_h, x-half_w:x+half_w, :] = 0
 
-    return img
+        return True, img
+    else:
+        print("Could not find detections for {}. Skipping file.".format(img_filename))
+        return False, None
 
 def get_detections(stem, detections_filenames):
-    matches = [s for s in detections_filenames if stem + ".txt" in s]
+    matches = [s for s in detections_filenames if stem + ".txt" == s.split('/')[-1]]
     if len(matches) == 0:
         print("No matching detections found for image {}.png. Skipping image.".format(stem))
         return False, None

@@ -1,9 +1,7 @@
-# Import numpy and OpenCV
-from pathlib import Path
 import os
 import time
-import glob
 import argparse
+from pathlib import Path
 import numpy as np
 import cv2 as cv
 
@@ -125,7 +123,7 @@ def warp_perspective(filenames, homography_chained, shape, out_dir, debug_dir = 
     corrected = cv.warpPerspective(img, h, (shape[1], shape[0]))
     filename = Path(f)
     filename = filename.stem
-    cv.imwrite(os.path.join(out_dir, filename + "_corrected.png"), corrected)
+    cv.imwrite(os.path.join(out_dir, filename + ".png"), corrected)
 
     end = time.time()
     print("Warped image {}/{} in {:.3f} s".format(idx+1, len(filenames), end - start))
