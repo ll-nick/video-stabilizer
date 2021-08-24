@@ -78,13 +78,25 @@ def find_image_shape(homography_list, shape):
   v0_min = 0
   bheight_max = height
 
-  # Find maximal bounding boxes
+  # Find maximum translation
+  corners_transformed = []
   for i in range(0, len(homography_list)):
-    corners_transformed = cv.perspectiveTransform(np.float32([corners_raw]), homography_list[i])[0]
-    u0, v0, bwidth, bheight = cv.boundingRect(corners_transformed)
+    corners_transformed.append(cv.perspectiveTransform(np.float32([corners_raw]), homography_list[i])[0])
+    u0, v0, _, _ = cv.boundingRect(corners_transformed[i])
     u0_min = min(u0_min, u0)
-    bwidth_max = max(bwidth_max, bwidth)
     v0_min = min(v0_min, v0)
+
+  translation = (u0_min, v0_min)
+
+  # Find maximum bounding box after translation
+  for corners in corners_transformed:
+    for idx, corner in enumerate(corners):
+      corners[idx, 0] = corners[idx, 0] - v0_min
+      corners[idx, 1] = corners[idx, 1] - u0_min
+    np.append(corners, np.zeros((2)))
+
+    _, _, bwidth, bheight = cv.boundingRect(corners)
+    bwidth_max = max(bwidth_max, bwidth)
     bheight_max = max(bheight_max, bheight)
 
   width = bwidth_max
@@ -96,7 +108,6 @@ def find_image_shape(homography_list, shape):
   if height % 2 == 1:
     height = height + 1
   new_shape = (height, width)
-  translation = (u0_min, v0_min)
 
   return new_shape, translation
 
@@ -116,8 +127,8 @@ def adjust_translation(homography_list, translation):
 
   return homography_list
 
-def warp_perspective(filenames, homography_chained, shape, out_dir, debug_dir = ""):
-  for idx, (f, h) in enumerate(zip(filenames, homography_chained)):
+def warp_perspective(filenames, homography_list, shape, out_dir, debug_dir = ""):
+  for idx, (f, h) in enumerate(zip(filenames, homography_list)):
     start = time.time()
     img = cv.imread(f)
     corrected = cv.warpPerspective(img, h, (shape[1], shape[0]))
@@ -187,8 +198,8 @@ def main(in_dir, out_dir, debug):
 
   homography_list, shape = compute_homography_list(filenames, debug_dir)
   homography_chained = chain_homography(homography_list, shape)
-  new_shape, translation = find_image_shape(homography_list, shape)
-  homography_list = adjust_translation(homography_list, translation)
+  new_shape, translation = find_image_shape(homography_chained, shape)
+  homography_chained = adjust_translation(homography_chained, translation)
   warp_perspective(filenames, homography_chained, new_shape, out_dir, debug_dir)
 
 
