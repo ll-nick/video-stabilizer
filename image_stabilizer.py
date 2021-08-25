@@ -57,7 +57,7 @@ def compute_homography_list(filenames, debug_dir = ""):
 
   return homography_list, shape
 
-def chain_homography(homography_list, shape):
+def chain_homography(homography_list):
   # Chain homography matrices
   for i in range(1, len(homography_list)):
     homography_list[i] = np.matmul(homography_list[i-1], homography_list[i])
@@ -81,8 +81,9 @@ def find_image_shape(homography_list, shape):
   # Find maximum translation
   corners_transformed = []
   for i in range(0, len(homography_list)):
-    corners_transformed.append(cv.perspectiveTransform(np.float32([corners_raw]), homography_list[i])[0])
-    u0, v0, _, _ = cv.boundingRect(corners_transformed[i])
+    corners = cv.perspectiveTransform(np.float32([corners_raw]), homography_list[i])[0]
+    corners_transformed.append(corners)
+    u0, v0, _, _ = cv.boundingRect(corners)
     u0_min = min(u0_min, u0)
     v0_min = min(v0_min, v0)
 
@@ -90,12 +91,12 @@ def find_image_shape(homography_list, shape):
 
   # Find maximum bounding box after translation
   for corners in corners_transformed:
-    for idx, corner in enumerate(corners):
-      corners[idx, 0] = corners[idx, 0] - v0_min
-      corners[idx, 1] = corners[idx, 1] - u0_min
-    np.append(corners, np.zeros((2)))
+    for idx in range(0, len(corners)):
+      corners[idx, 0] = corners[idx, 0] - u0_min
+      corners[idx, 1] = corners[idx, 1] - v0_min
+    corners = np.vstack((corners, np.zeros((1, 2))))
 
-    _, _, bwidth, bheight = cv.boundingRect(corners)
+    _, _, bwidth, bheight = cv.boundingRect(np.float32(corners))
     bwidth_max = max(bwidth_max, bwidth)
     bheight_max = max(bheight_max, bheight)
 
@@ -197,7 +198,7 @@ def main(in_dir, out_dir, debug):
     ensure_dir(debug_dir)
 
   homography_list, shape = compute_homography_list(filenames, debug_dir)
-  homography_chained = chain_homography(homography_list, shape)
+  homography_chained = chain_homography(homography_list)
   new_shape, translation = find_image_shape(homography_chained, shape)
   homography_chained = adjust_translation(homography_chained, translation)
   warp_perspective(filenames, homography_chained, new_shape, out_dir, debug_dir)
